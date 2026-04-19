@@ -1,14 +1,15 @@
-const CACHE_NAME = 'taptrack-v1';
+const CACHE_NAME = 'taptrack-v3';
 const ASSETS = [
     './',
     './index.html',
     './style.css',
     './app.js',
-    './manifest.json',
-    'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap'
+    './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
+    // Force the waiting service worker to become the active service worker
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
@@ -16,10 +17,26 @@ self.addEventListener('install', (event) => {
     );
 });
 
+self.addEventListener('activate', (event) => {
+    // Clear old caches
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.filter((cacheName) => {
+                    return cacheName !== CACHE_NAME;
+                }).map((cacheName) => {
+                    return caches.delete(cacheName);
+                })
+            );
+        })
+    );
+});
+
 self.addEventListener('fetch', (event) => {
+    // Network-first strategy for a better development experience
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
         })
     );
 });
